@@ -30,7 +30,7 @@ app.use(session({
   secret: 'secret', // secret key for session cookies 
   resave: false, // doesn't save the session at each request
   saveUninitialized: false, // don't create session for unauthentificated user
-  cookie: { expires:60*60*24 } 
+  cookie: { } 
 }));
 
 app.use('/', router);

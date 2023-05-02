@@ -5,8 +5,8 @@ const session = require('express-session');
 const fetch = require("node-fetch");
 
 const dbConfig= require('../db_config');
-const { password } = require('../db_config');
 
+//return all users
 exports.get_users= async function(req,res){
     
     const list_users= await fetch('http://34.248.236.103:3000/students').then(response =>response.json()).then(data=>{return data})
@@ -14,11 +14,12 @@ exports.get_users= async function(req,res){
     
 }
 
+//authentificate the user
 exports.authentification=async function(req,res){
     console.log(req.body.userId)
     const student_id=req.body.userId
     const student_password=req.body.password
-    console.log(password)
+    console.log(student_password)
     const resp= await fetch('http://34.248.236.103:3000/authorized', 
         {   
             method:'POST',
@@ -47,7 +48,7 @@ exports.authentification=async function(req,res){
 exports.get_profil= async function(req,res){
     
 
-    //fetch('http://34.248.236.103:3000/student?id='+req.session.userId).then(response => response.json()).then(data => {console.log(data)});
+    fetch('http://34.248.236.103:3000/student?id='+req.session.userId).then(response => response.json()).then(data => {console.log(data)});
     
     
     
@@ -56,23 +57,37 @@ exports.get_profil= async function(req,res){
 //check if the user is in the chat database
 //else, register it
 exports.check_user= async function(req,res){
-    console.log(dbConfig)
     const connexion= await oracledb.getConnection(dbConfig)
 
-    //const exec= await connexion.execute('SELECT * FROM User WHERE username='+req.session.userId)
-    console.log(exec)
+    const result= await connexion.execute(`SELECT * FROM "User" WHERE username=:userId`,{userId:req.session.userId})
+    if(result.rows && result.rows.length==0){
+       const user= await fetch('http://34.248.236.103:3000/student?id='+req.session.userId)
+        .then(response => response.json())
+        .then(data => data[0]);
+        if(user){
+            await connexion.execute(`INSERT INTO "User" VALUES (:userName, :email, :firstName,:lastName,:password)`,
+                { userName:user[2], email:user[5], firstName:user[3], lastName:user[4],password: user[2] },{autoCommit: true}).then(
+
+                    async()=>{
+                        const new_user=await connexion.execute(`SELECT * FROM "User" WHERE username=:userId`,{userId:req.session.userId})
+                        res.send(new_user)
+                    }
+                )
+
+        }
+        
+    }
+    else{
+        await connexion.close()
+        res.send(result)
+    }
+    
 }
 
 exports.log_out=async function(req,res){
 
     //destroy the session of the connected user
-    req.session.destroy((err) => {
-        if (err) {
-          console.log(err);
-        } else {
-          res.send({isConnected:false,message:'u are log out'}); 
-        }
-      });
+    req.session.destroy();
 
-      res.send("end")
+    res.send("You are log out")
 }
