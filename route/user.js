@@ -10,7 +10,7 @@ var controller=require("../Controllers/UserController");
 
 router.get("/",controller.get_users);
 router.post("/login",controller.authentification)
-router.post("/check_user",authMiddleware,controller.check_user)
+router.get("/check_user",authMiddleware,controller.check_user)
 router.get("/profil",authMiddleware,controller.get_profil)
 router.get("/logout",authMiddleware,controller.log_out)
 

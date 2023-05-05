@@ -10,6 +10,7 @@ function authMiddleware(req, res, next) {
     next();
   } else {
     // else redirect the user to the log in page
+    console.log("not connected")
     res.send('You are not connected!');
   }
 }

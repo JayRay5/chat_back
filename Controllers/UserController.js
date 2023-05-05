@@ -26,12 +26,44 @@ exports.authentification=async function(req,res){
             body:JSON.stringify({student_id: student_id,student_password: student_password}),
             headers:{'Content-Type': 'application/json'}
         }
-        ).then(response =>response.json()).then(data=>{
+        ).then(response =>response.json()).then(async function(data){
             console.log(data)
             if(data==1){
-                req.session.userId=student_id  
+                req.session.userId=student_id 
+                //check if the user is in the chat database
+                const connexion= await oracledb.getConnection(dbConfig)
+
+                const result= await connexion.execute(`SELECT * FROM "User" WHERE username=:userId`,{userId:req.session.userId})
+                if(result.rows && result.rows.length==0){
+                const user= await fetch('http://34.248.236.103:3000/student?id='+req.session.userId)
+                    .then(response => response.json())
+                    .then(data => data[0]);
+                    if(user){
+                        await connexion.execute(`INSERT INTO "User" VALUES (:userName, :email, :firstName,:lastName,:password)`,
+                            { userName:user[2], email:user[5], firstName:user[3], lastName:user[4],password: user[2] },{autoCommit: true}).then(
+
+                                async()=>{
+                                    const new_user=await connexion.execute(`SELECT * FROM "User" WHERE username=:userId`,{userId:req.session.userId})
+                                    await connexion.close()
+                                    console.log(new_user)
+                                }
+                            )
+
+                    }
+                    else{
+                        console.log("User not found")
+                    }
+                    
+                }
+                else{
+                    await connexion.close()
+                    console.log(result)
+                }
+                
+                
                 console.log(req.session)
                 res.setHeader('Set-Cookie', `sessionId=${req.session.userId}`);
+                console.log(res.header)
                 res.send({isConnected:true,userId:req.session.userId,message:"auth succes"})
             }
             else{
@@ -70,6 +102,7 @@ exports.check_user= async function(req,res){
 
                     async()=>{
                         const new_user=await connexion.execute(`SELECT * FROM "User" WHERE username=:userId`,{userId:req.session.userId})
+                        await connexion.close()
                         res.send(new_user)
                     }
                 )
