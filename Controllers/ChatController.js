@@ -41,6 +41,14 @@ exports.create_chat=async function(req,res){
     {   userName:req.session.userId,
         chat_id:result.outBinds.chat_id[0]
       },{autoCommit: true})
+
+    if(req.body.userId){
+      await connexion.execute(`INSERT INTO "DISCUSSVIA" VALUES (:userName, :chat_id)`,
+      {   userName:req.body.userId,
+          chat_id:result.outBinds.chat_id[0]
+        },{autoCommit: true})
+    }
+
     connexion.close()
     res.send(result.outBinds.chat_id)
 
@@ -70,20 +78,60 @@ exports.add_user_to_chat=async function(req,res){
 }
 
 exports.get_chat=async function(req,res){
-    const connexion= await oracledb.getConnection(dbConfig)
+    console.log("get chat")
+    if(req.params.id){
+        const connexion= await oracledb.getConnection(dbConfig)
 
-    const result= await connexion.execute(`SELECT *
-    FROM "DISCUSSVIA"
-    JOIN "User"  ON "DISCUSSVIA".username = "User".username
-    JOIN "CHATROOM" ON "DISCUSSVIA".chat_id = "CHATROOM".chat_id
-    FULL JOIN "MESSAGE" ON  "CHATROOM".chat_id= "MESSAGE".chat_id
-    FULL JOIN "TEXT" ON "MESSAGE".message_id= "TEXT".message_id
-    WHERE "CHATROOM".chat_id=:chatId`,{chatId:req.body.chatId})
-    connexion.close()
+        const result= await connexion.execute(`SELECT *
+        FROM "DISCUSSVIA"
+        JOIN "User"  ON "DISCUSSVIA".username = "User".username
+        JOIN "CHATROOM" ON "DISCUSSVIA".chat_id = "CHATROOM".chat_id
+        FULL JOIN "MESSAGE" ON  "CHATROOM".chat_id= "MESSAGE".chat_id AND "User".username = "MESSAGE".username
+        FULL JOIN "TEXT" ON "MESSAGE".message_id= "TEXT".message_id
+        WHERE "CHATROOM".chat_id=:chatId`,{chatId:req.params.chatId})
+        connexion.close()
 
-    req.session.chatId=req.body.chatId
-    console.log(req.session)
-    res.send(result)
+        req.session.chatId=req.params.chatId
+        console.log(req.session)
+        res.send(result)
+    }
+    else{
+        res.send("Impossible to complete the task!")
+    }
+
+
+}
+
+exports.delete_chat=async function(req,res){
+    console.log("delete chat")
+    if(req.params.chatId){
+        const connexion= await oracledb.getConnection(dbConfig)
+        console.log(req.params.chatId)
+        await connexion.execute(
+            `DELETE FROM "TEXT" WHERE message_id IN (SELECT "MESSAGE".message_id FROM "MESSAGE" WHERE chat_id = :chatId)`,
+            {chatId:req.params.chatId},
+            {autoCommit: true})
+
+        await connexion.execute(
+            `DELETE FROM "MESSAGE" WHERE "MESSAGE".chat_id=:chatId `,
+            {chatId:req.params.chatId},
+            {autoCommit: true})
+
+        await connexion.execute(
+            `DELETE FROM "DISCUSSVIA" WHERE "DISCUSSVIA".chat_id=:chatId`,
+            {chatId:req.params.chatId},
+            {autoCommit: true})
+
+        await connexion.execute(
+            `DELETE FROM "CHATROOM" WHERE "CHATROOM".chat_id=:chatId`,
+            {chatId:req.params.chatId},
+            {autoCommit: true})
+        connexion.close()
+        res.send("")
+    }
+    else{
+        res.send("Impossible to complete the task!")
+    }
 
 
 }
