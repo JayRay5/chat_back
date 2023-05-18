@@ -8,9 +8,33 @@ const dbConfig= require('../db_config');
 
 //return all users
 exports.get_users= async function(req,res){
+   if(req.session.userId){
     
-    const list_users= await fetch('http://34.248.236.103:3000/students').then(response =>response.json()).then(data=>{return data})
-    res.send(list_users)
+        const list_users= await fetch('http://34.248.236.103:3000/students').then(response =>response.json()).then(data=>{return data})
+        res.send(list_users)    
+    }
+    else{
+        res.send("You are not connected")
+    }
+}
+
+exports.get_users_filtered= async function(req,res){
+   
+    const connexion= await oracledb.getConnection(dbConfig)
+
+    const result= await connexion.execute(`SELECT "User".*
+    FROM "User"
+    LEFT JOIN "DISCUSSVIA"  ON "DISCUSSVIA".username = "User".username
+    WHERE  NOT EXISTS (
+        SELECT 1
+        FROM "DISCUSSVIA"
+        WHERE "DISCUSSVIA".username = "User".username
+          AND "DISCUSSVIA".chat_id = :chatId
+      )`,{chatId:req.session.chatId})
+    connexion.close()
+    res.send(result)
+    
+    //const list_users= await fetch('http://34.248.236.103:3000/students').then(response =>response.json()).then(data=>{return data})
     
 }
 

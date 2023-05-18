@@ -56,18 +56,21 @@ exports.create_chat=async function(req,res){
 }
 
 exports.add_user_to_chat=async function(req,res){
+    console.log("add user",req.body.userId)
     const connexion= await oracledb.getConnection(dbConfig)
     
     try{
         const result= await connexion.execute(`INSERT INTO "DISCUSSVIA" VALUES (:userName, :chat_id)`,
         {   userName:req.body.userId, 
-            chat_id:req.session.chatId//req.body.chatId
+            chat_id:req.session.chatId
         },{autoCommit: true})
+        console.log(result)
         connexion.close()
         res.send(result)
     
     }
-    catch{
+    catch(err){
+        console.log(err)
         connexion.close()
         res.send("Impossible operation")
         
@@ -79,7 +82,7 @@ exports.add_user_to_chat=async function(req,res){
 
 exports.get_chat=async function(req,res){
     console.log("get chat")
-    if(req.params.id){
+    if(req.params.chatId){
         const connexion= await oracledb.getConnection(dbConfig)
 
         const result= await connexion.execute(`SELECT *
@@ -89,11 +92,13 @@ exports.get_chat=async function(req,res){
         FULL JOIN "MESSAGE" ON  "CHATROOM".chat_id= "MESSAGE".chat_id AND "User".username = "MESSAGE".username
         FULL JOIN "TEXT" ON "MESSAGE".message_id= "TEXT".message_id
         WHERE "CHATROOM".chat_id=:chatId`,{chatId:req.params.chatId})
-        connexion.close()
 
         req.session.chatId=req.params.chatId
-        console.log(req.session)
-        res.send(result)
+        const rows = result.rows;
+        const jsonResult = rows.map(row => Object.assign({}, ...row.map((value, index) => ({ [result.metaData[index].name]: value }))));
+
+        connexion.close();
+        res.json(jsonResult);
     }
     else{
         res.send("Impossible to complete the task!")
