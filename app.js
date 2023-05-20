@@ -19,6 +19,7 @@ app.set('socketio', io);
 
 //import router
 var router = require('./route');
+const cors = require('./cors/cors');
 
 //configure headers
 
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     next();
   });
+ // app.use(corsMiddleware)
   app.use(cookieParser())
   app.use(bodyParser.urlencoded({ extended: true }));
   app.use(express.json());
@@ -39,7 +41,7 @@ app.use(session({
   secret: 'secret', // secret key for session cookies 
   resave: false, // doesn't save the session at each request
   saveUninitialized: false, // don't create session for unauthentificated user
-  cookie: { } 
+  cookie: { /*sameSite:'none'*/} 
 }));
 
 app.use('/', router);
