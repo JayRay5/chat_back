@@ -1,5 +1,6 @@
 //import
 const oracledb = require('oracledb');
+//const { io } = require('../app.js'); 
 
 const session = require('express-session');
 const fetch = require("node-fetch");
@@ -91,13 +92,16 @@ exports.get_chat=async function(req,res){
         JOIN "CHATROOM" ON "DISCUSSVIA".chat_id = "CHATROOM".chat_id
         FULL JOIN "MESSAGE" ON  "CHATROOM".chat_id= "MESSAGE".chat_id AND "User".username = "MESSAGE".username
         FULL JOIN "TEXT" ON "MESSAGE".message_id= "TEXT".message_id
-        WHERE "CHATROOM".chat_id=:chatId`,{chatId:req.params.chatId})
+        WHERE "CHATROOM".chat_id=:chatId
+        ORDER BY "MESSAGE".date_day
+        `,{chatId:req.params.chatId})
 
         req.session.chatId=req.params.chatId
         const rows = result.rows;
         const jsonResult = rows.map(row => Object.assign({}, ...row.map((value, index) => ({ [result.metaData[index].name]: value }))));
 
         connexion.close();
+        //io.emit('messages', result);
         res.json(jsonResult);
     }
     else{
@@ -160,7 +164,28 @@ exports.write_message=async function(req,res){
     {   message_id:result.outBinds.message_id[0],
         message_value:req.body.messageValue
     },{autoCommit: true})
+
+    const messages= await connexion.execute(`SELECT *
+        FROM "DISCUSSVIA"
+        JOIN "User"  ON "DISCUSSVIA".username = "User".username
+        JOIN "CHATROOM" ON "DISCUSSVIA".chat_id = "CHATROOM".chat_id
+        FULL JOIN "MESSAGE" ON  "CHATROOM".chat_id= "MESSAGE".chat_id AND "User".username = "MESSAGE".username
+        FULL JOIN "TEXT" ON "MESSAGE".message_id= "TEXT".message_id
+        WHERE "CHATROOM".chat_id=:chatId
+        ORDER BY "MESSAGE".date_day
+        `,{chatId:req.session.chatId})
+
+    console.log(messages.rows)
+    const rows = messages.rows;
+    const jsonResult = rows.map(row => Object.assign({}, ...row.map((value, index) => ({ [messages.metaData[index].name]: value }))))
     connexion.close()
+    
+    const io = req.app.get('socketio');
+    if(io){
+        console.log("cc")
+        console.log(io)
+    io.emit('messages', jsonResult);}
+
     res.send(result)
 
 

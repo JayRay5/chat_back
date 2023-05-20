@@ -6,6 +6,15 @@ const corsMiddleware=require('./cors/cors')
 const app=express();
 const session = require('express-session');
 const oracledb = require('oracledb');
+const http = require('http');
+const socketIO = require('socket.io');
+
+//handle web socket
+const server = http.createServer(app);
+const io = socketIO(server);
+//module.exports.io = io;
+app.set('socketio', io);
+
 
 
 //import router
@@ -36,7 +45,7 @@ app.use(session({
 app.use('/', router);
 
 const port =8000
-app.listen(port,()=>{
+server.listen(port,()=>{
 
     console.log(`App is running on ${port}`)
 })

@@ -22,7 +22,7 @@ exports.get_users_filtered= async function(req,res){
    
     const connexion= await oracledb.getConnection(dbConfig)
 
-    const result= await connexion.execute(`SELECT "User".*
+    const result= await connexion.execute(`SELECT DISTINCT "User".*
     FROM "User"
     LEFT JOIN "DISCUSSVIA"  ON "DISCUSSVIA".username = "User".username
     WHERE  NOT EXISTS (

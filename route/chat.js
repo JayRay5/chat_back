@@ -13,7 +13,7 @@ router.get("/all",authMiddleware,controller.get_chats);
 router.get("/:chatId",authMiddleware,controller.get_chat);
 router.post("/new",authMiddleware,controller.create_chat);
 router.post("/chat/add_user",authMiddleware,controller.add_user_to_chat)
-router.post("/chat/new_message",authMiddleware,controller.write_message)
+router.post("/chat/:chatId/new_message",authMiddleware,controller.write_message)
 router.delete("/delete/:chatId",authMiddleware,controller.delete_chat)
 
 
